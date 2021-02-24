@@ -1,0 +1,11 @@
+.classpath
+.project
+.settings
+.gradle
+.metals
+.bloop
+.dotty-ide-disabled
+.vscode
+bin
+build
+build-2.12

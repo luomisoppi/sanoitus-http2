@@ -1,0 +1,13 @@
+include 'hpack',
+        'hpack-jetty',
+        'http2-client',
+        'http2-exchange',
+        'http2-server',
+        'http2-utils',
+        'http2-wire-dsl',
+        'http2-wire-test',
+        'http2-wire-netty'
+
+rootProject.buildFileName = 'build-2.12.gradle'
+gradle.ext.scalaVersion='2.12'
+gradle.ext.scalaMinorVersion='10'

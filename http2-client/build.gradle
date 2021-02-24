@@ -1,0 +1,6 @@
+dependencies {
+  api project(':http2-exchange')
+
+  testImplementation "org.scalatestplus:scalatestplus-scalacheck_${gradle.scalaVersion}:3.1.0.0-RC2",
+                     'com.vladsch.flexmark:flexmark-all:0.35.10'
+}

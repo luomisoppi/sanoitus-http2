@@ -1,0 +1,29 @@
+apply plugin: 'scala'
+
+wrapper{
+  gradleVersion = "6.7.1"
+}
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+}
+
+dependencies {
+  implementation "org.sanoitus:sanoitus-http2-server_${gradle.scalaVersion}:0.1.0-SNAPSHOT",
+                 "org.sanoitus:sanoitus-http2-client_${gradle.scalaVersion}:0.1.0-SNAPSHOT",
+                 "org.sanoitus:sanoitus-http2-wire-netty_${gradle.scalaVersion}:0.1.0-SNAPSHOT",
+                 "org.sanoitus:sanoitus-hpack-jetty_${gradle.scalaVersion}:0.1.0-SNAPSHOT",
+                 'org.apache.tika:tika-core:1.25',
+                 'org.slf4j:slf4j-simple:2.0.0-alpha1'
+}
+
+task fileServer(type: JavaExec) {
+  classpath = sourceSets.main.runtimeClasspath
+  main = 'sanoitus.http2.example.FileServer'
+}
+
+task proxyServer(type: JavaExec) {
+  classpath = sourceSets.main.runtimeClasspath
+  main = 'sanoitus.http2.example.ProxyServer'
+}

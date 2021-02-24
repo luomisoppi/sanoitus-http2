@@ -1,0 +1,13 @@
+dependencies {
+  api project(':http2-wire-dsl'),
+      project(':http2-utils'),
+      'io.netty:netty-all:4.1.51.Final',
+      'io.netty:netty-tcnative-boringssl-static:2.0.31.Final',
+      'org.slf4j:slf4j-api:2.0.0-alpha1',
+      "org.sanoitus:sanoitus-parallel-core_${gradle.scalaVersion}:0.1.1",
+      "org.sanoitus:sanoitus-stream-core_${gradle.scalaVersion}:0.1.1"
+
+  testImplementation project(path: ":http2-wire-test")
+
+  testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.0-alpha1'
+}

@@ -1,0 +1,4 @@
+dependencies {
+  api "org.sanoitus:sanoitus-core_${gradle.scalaVersion}:0.1.1",
+      "org.scala-stm:scala-stm_${gradle.scalaVersion}:0.9.1"
+}

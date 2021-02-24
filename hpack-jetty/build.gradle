@@ -1,0 +1,4 @@
+dependencies {
+  api project(':hpack'),
+      'org.eclipse.jetty.http2:http2-hpack:11.0.0'
+}

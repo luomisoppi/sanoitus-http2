@@ -1,0 +1,11 @@
+dependencies {
+  api project(':hpack'),
+                 project(':http2-wire-dsl'),
+                 project(':http2-utils'),
+                 "org.sanoitus:sanoitus-parallel-dsl_${gradle.scalaVersion}:0.1.1",
+                 "org.sanoitus:sanoitus-stream-dsl_${gradle.scalaVersion}:0.1.1",
+                 "org.scala-stm:scala-stm_${gradle.scalaVersion}:0.9.1"
+
+  testImplementation project(':http2-wire-netty'),
+                     project(':hpack-jetty')
+}
