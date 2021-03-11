@@ -13,12 +13,20 @@ trait InboundExchange {
   val isComplete: Ref[Boolean]
   val dataTotal = Ref(0)
   val window: Ref[Int]
+  val closed: Ref[Boolean] = Ref(false)
 
   def getHeaders(): Map[String, String]
 
+  def close(implicit tx: InTxn): Continue[Unit] = {
+    closed() = true
+    Continue((), reader.swap(None).toList.map(Resumed(_, Right(new Array[Byte](0)))))
+  }
+
   val readData: Program[Array[Byte]] = schedulingEffect[Array[Byte]] { sus => implicit tx =>
     {
-      if (data().isEmpty) {
+      if (closed()) {
+        Continue(new Array[Byte](0))
+      } else if (data().isEmpty) {
         if (isComplete()) {
           Continue(new Array[Byte](0))
         } else {

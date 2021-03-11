@@ -12,9 +12,9 @@ import sanoitus.stream.StreamLanguage
 
 object InboundProcessor {
   def process(connection: Connection,
-              frameProcessors: FrameProcessors): Either[Error, (Frame, Http2Frame)] => Program[Unit] =
+              frameProcessors: FrameProcessors): Either[Error, (Frame, Http2Frame)] => Program[Option[Http2Frame]] =
     incoming =>
-      schedulingEffect[Unit] { _ => implicit tx =>
+      schedulingEffect[Option[Http2Frame]] { _ => implicit tx =>
         {
           import frameProcessors._
           val result = incoming match {
@@ -36,7 +36,7 @@ object InboundProcessor {
             case Left(e) => Left(e)
           }
 
-          result match {
+          val processed = result match {
             case Right(result) => result
             case Left(StreamError(code, frame, message @ _, cause @ _)) =>
               connection.streams().get(frame.stream) match {
@@ -56,11 +56,13 @@ object InboundProcessor {
               connection.control.goAway(code)
             }
           }
+          processed.map(_ => incoming.toOption.map(_._2))
         }
       }
 
   def apply(streamLanguage: StreamLanguage,
             readWire: Program[Option[Frame]],
+            closeWire: Program[Unit],
             hpackProvider: HPackProvider,
             connection: Connection,
             frameProcessors: FrameProcessors): streamLanguage.Stream[Unit] = {
@@ -78,5 +80,9 @@ object InboundProcessor {
         case err @ Left(_)     => unit(err)
       })
       .through(process(connection, frameProcessors))
+      .through({
+        case Some(_: GoAway) => closeWire
+        case _               => unit(())
+      })
   }
 }

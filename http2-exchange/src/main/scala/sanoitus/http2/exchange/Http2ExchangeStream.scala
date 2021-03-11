@@ -1,7 +1,8 @@
-package sanoitus.http2.exchange
+package sanoitus
+package http2.exchange
 
 import scala.concurrent.stm._
-import sanoitus.http2.utils.Continue
+import sanoitus.http2.utils._
 
 trait Http2ExchangeStream {
 
@@ -24,8 +25,10 @@ trait Http2ExchangeStream {
     val inboundC =
       if (!inbound.isComplete()) {
         val removed = inbound.data.swap(new Array(0))
-        inbound.writeData(new Array(0), true)
-        inbound.flowControl.consumed(this, removed.length)
+        for {
+          _ <- inbound.writeData(new Array(0), true)
+          _ <- inbound.flowControl.consumed(this, removed.length)
+        } yield ()
       } else {
         Continue(())
       }
@@ -44,6 +47,18 @@ trait Http2ExchangeStream {
     outbound.writeControlFrame(RstStream(id, code))
   }
 
-  def closeRequest() = ()
-  def closeResponse() = ()
+  def close(implicit tx: InTxn): Continue[Unit] =
+    for {
+      _ <- inbound.close
+      _ <- outbound.close
+    } yield ()
+
+  def resourceClose(implicit tx: InTxn): Continue[Unit] =
+    getState() match {
+      case Open             => rst(Error.INTERNAL_ERROR)
+      case HalfClosedRemote => rst(Error.INTERNAL_ERROR)
+      case _                => Continue(())
+    }
+
+  val closer = schedulingEffect[Unit] { _ => implicit tx => resourceClose }
 }

@@ -3,11 +3,12 @@ package http2
 package server
 
 import scala.concurrent.stm._
-import sanoitus.http2.utils._
-import sanoitus.http2.exchange.Http2ExchangeStream
+
 import sanoitus.http2.exchange.Connection
+import sanoitus.http2.exchange.Http2ExchangeStream
 import sanoitus.http2.exchange.OutboundExchange
 import sanoitus.http2.exchange.ResponseHeaders
+import sanoitus.http2.utils._
 
 case class ServerOutboundExchange(override val stream: Http2ExchangeStream,
                                   override val connection: Connection,

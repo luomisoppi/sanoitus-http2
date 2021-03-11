@@ -9,7 +9,7 @@ import sanoitus.test.http2.wire.RawFrameTest
 
 class NettyRawFrameTest extends RawFrameTest {
 
-  override val port = 8765
+  override val port = 10466
 
   val (privateKey, keyCert) = CertificateCreator.create()
 

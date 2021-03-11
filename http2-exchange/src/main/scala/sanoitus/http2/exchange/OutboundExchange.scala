@@ -13,6 +13,12 @@ trait OutboundExchange extends Outbound {
   val data: Ref[Option[Array[Byte]]] = Ref(None)
   val isComplete: Ref[Boolean]
   val writer: Ref[Option[Suspended[Boolean]]]
+  val closed: Ref[Boolean] = Ref(false)
+
+  def close(implicit tx: InTxn): Continue[Unit] = {
+    closed() = true
+    Continue((), writer.swap(None).toList.map(Resumed(_, Right(false))))
+  }
 
   override def dataBytesAvailable(implicit tx: InTxn) =
     data().map(_.length)
@@ -73,7 +79,7 @@ trait OutboundExchange extends Outbound {
 
   def writeData(bytes: Array[Byte], end: Boolean): Program[Boolean] = schedulingEffect[Boolean] { sus => implicit tx =>
     {
-      if (isComplete()) {
+      if (closed() || isComplete()) {
         Continue(false)
       } else if (writer().isDefined) {
         throw new IllegalStateException()

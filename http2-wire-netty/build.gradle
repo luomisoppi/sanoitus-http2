@@ -4,8 +4,8 @@ dependencies {
       'io.netty:netty-all:4.1.51.Final',
       'io.netty:netty-tcnative-boringssl-static:2.0.31.Final',
       'org.slf4j:slf4j-api:2.0.0-alpha1',
-      "org.sanoitus:sanoitus-parallel-core_${gradle.scalaVersion}:0.1.1",
-      "org.sanoitus:sanoitus-stream-core_${gradle.scalaVersion}:0.1.1"
+      "org.sanoitus:sanoitus-parallel-core_${gradle.scalaVersion}:0.1.2",
+      "org.sanoitus:sanoitus-stream-core_${gradle.scalaVersion}:0.1.2"
 
   testImplementation project(path: ":http2-wire-test")
 

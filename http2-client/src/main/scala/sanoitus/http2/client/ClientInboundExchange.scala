@@ -3,6 +3,7 @@ package http2
 package client
 
 import scala.concurrent.stm._
+
 import sanoitus.http2.exchange.Connection
 import sanoitus.http2.exchange.Http2ExchangeStream
 import sanoitus.http2.exchange.InboundExchange
@@ -20,9 +21,17 @@ case class ClientInboundExchange(override val connection: Connection,
   val inboundHeaders: Ref[Option[ResponseHeaders]] = Ref(None)
   val headerWaiters: Ref[List[Suspended[Boolean]]] = Ref(List())
 
+  override def close(implicit tx: InTxn): Continue[Unit] =
+    for {
+      _ <- super.close
+      _ <- Continue((), headerWaiters.swap(List()).map(Resumed(_, Right(false))))
+    } yield ()
+
   val waitForResponse = schedulingEffect[Boolean] { sus => implicit tx =>
     {
-      if (inboundHeaders().isDefined) {
+      if (closed()) {
+        Continue(false)
+      } else if (inboundHeaders().isDefined) {
         Continue(true)
       } else {
         headerWaiters.transform(sus :: _)

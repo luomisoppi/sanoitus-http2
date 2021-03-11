@@ -33,9 +33,12 @@ object OutboundProcessor {
           unit(List())
         }
       }
-      frames = data.controlFrames ++ exchangeFrames
+      frames = data.controlFrames
+        .find(_.isInstanceOf[GoAway])
+        .map(List(_))
+        .getOrElse(data.controlFrames ++ exchangeFrames)
       wireFrames = frames.map(_.toWire())
-      success <- writeWire(wireFrames)
+      success <- if (wireFrames.isEmpty) /*stream cancelled after picking it*/ unit(true) else writeWire(wireFrames)
       _ <- effect[Unit](_ =>
         data.exchangeData match {
           case Some(data) => Some(data.writer.foreach(_.proceed(success)))
@@ -44,9 +47,9 @@ object OutboundProcessor {
       )
     } yield ()
 
-  def closer(resource: Resource[_])(data: Http2StreamData): Program[Unit] =
+  def closer(close: Program[Unit])(data: Http2StreamData): Program[Unit] =
     if (data.controlFrames.exists(_.isInstanceOf[GoAway])) {
-      close(resource)
+      close
     } else {
       unit(())
     }
@@ -55,7 +58,7 @@ object OutboundProcessor {
             writeWire: List[Frame] => Program[Boolean],
             hpackProvider: HPackProvider,
             connection: Connection,
-            wireConnection: Resource[_]): streamLanguage.Stream[Unit] = {
+            closeWire: Program[Unit]): streamLanguage.Stream[Unit] = {
     import streamLanguage._
 
     val hpackOutgoing = new OutboundHPackProcessor(hpackProvider.createEncoder())
@@ -67,6 +70,6 @@ object OutboundProcessor {
       .map(connection.prioritization.pickStream)
       .through(connection.consumeStream)
       .effect(sendFrames(writeWire, hpackOutgoing))
-      .through(closer(wireConnection))
+      .through(closer(closeWire))
   }
 }

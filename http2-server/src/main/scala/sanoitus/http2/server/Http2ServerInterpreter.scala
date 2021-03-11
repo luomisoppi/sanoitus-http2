@@ -1,16 +1,17 @@
-package sanoitus.http2
+package sanoitus
+package http2
 package server
 
-import sanoitus._
-import sanoitus.http2.wire.Http2WireLanguage
-import sanoitus.http2.hpack.HPackProvider
-import sanoitus.stream.StreamLanguage
-import sanoitus.parallel.ParallelLanguage
-import sanoitus.http2.exchange.inbound.InboundProcessor
-import sanoitus.http2.exchange.outbound.OutboundProcessor
-import sanoitus.util.OptionT._
 import sanoitus.http2.exchange.ConnectionSettings
 import sanoitus.http2.exchange.RequestHeaders
+import sanoitus.http2.exchange.inbound.InboundProcessor
+import sanoitus.http2.exchange.outbound.OutboundProcessor
+import sanoitus.http2.hpack.HPackProvider
+import sanoitus.http2.utils._
+import sanoitus.http2.wire.Http2WireLanguage
+import sanoitus.parallel.ParallelLanguage
+import sanoitus.stream.StreamLanguage
+import sanoitus.util.OptionT._
 
 class Http2ServerInterpreter(wire: Http2WireLanguage,
                              stream: StreamLanguage,
@@ -45,8 +46,14 @@ class Http2ServerInterpreter(wire: Http2WireLanguage,
                                         maxFrameSize,
                                         maxHeaderListSize)
           connection = new ServerConnection(settings, inboundBufferSize)
+
+          wireConnectionCloser <- sharedCloser(parallel, wireConn)
+          in <- createResource(())(_ => wireConnectionCloser)
+          out <- createResource(())(_ => wireConnectionCloser)
+
           inboundLogic = InboundProcessor(stream,
                                           ReadFrame(wireConn.value),
+                                          wireConnectionCloser,
                                           hpackProvider,
                                           connection,
                                           ServerFrameProcessors)
@@ -55,18 +62,18 @@ class Http2ServerInterpreter(wire: Http2WireLanguage,
             frames => WriteFrame(wireConn.value, frames.head, frames.drop(1)),
             hpackProvider,
             connection,
-            wireConn
+            wireConnectionCloser
           )
-          _ <- Fork(Process(inboundLogic), wireConn)
-          _ <- Fork(Process(outboundLogic), wireConn)
-          res <- resource(connection)(_ => println("Closing server exchange connection"))
+          _ <- Fork(Process(inboundLogic).flatMap(_ => connection.closer), in)
+          _ <- Fork(Process(outboundLogic), out)
+          res <- createResource(connection)(_.sendGoAway)
         } yield res
 
       case GetRequest(connection) =>
         for {
           request <- connection.getRequest()
           resourceOpt <- request match {
-            case Some(r) => resource(r)(_.closeRequest()).map(Some.apply)
+            case Some(r) => createResource(r)(_.closer).map(Some.apply)
             case None    => unit(None)
           }
         } yield resourceOpt
@@ -82,7 +89,7 @@ class Http2ServerInterpreter(wire: Http2WireLanguage,
       case StartResponse(request, headers, end) => {
         for {
           _ <- request.outbound.startResponse(headers, end)
-          resource <- resource(request) { _.closeResponse() }
+          resource <- createResource(request) { _.closer }
         } yield Some(resource)
       }
 

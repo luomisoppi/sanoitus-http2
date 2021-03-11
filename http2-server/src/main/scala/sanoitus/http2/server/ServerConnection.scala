@@ -3,13 +3,13 @@ package http2
 package server
 
 import scala.concurrent.stm._
-import sanoitus.http2.utils._
+
 import sanoitus.http2.exchange._
 import sanoitus.http2.exchange.padding.NoPaddingStrategy
 import sanoitus.http2.exchange.priority.RandomPrioritization
+import sanoitus.http2.utils._
+
 import Error._
-import sanoitus.http2.exchange.ConnectionSettings
-import sanoitus.http2.exchange.Connection
 
 class ServerConnection(override val localSettings: ConnectionSettings, bufferSize: Int) extends Connection {
 
@@ -71,4 +71,10 @@ class ServerConnection(override val localSettings: ConnectionSettings, bufferSiz
       }
     }
   }
+
+  override def close(implicit tx: InTxn): Continue[Unit] =
+    for {
+      _ <- super.close
+      _ <- requests().asInstanceOf[FifoSchedulingBuffer[ExchangeStream]].close(tx)
+    } yield ()
 }

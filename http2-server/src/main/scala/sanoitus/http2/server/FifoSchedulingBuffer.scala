@@ -1,8 +1,8 @@
 package sanoitus
 package http2.server
 
-import scala.concurrent.stm._
 import scala.collection.immutable.Queue
+import scala.concurrent.stm._
 
 import sanoitus.http2.utils._
 
@@ -42,5 +42,10 @@ case class FifoSchedulingBuffer[A]() extends SchedulingBuffer[A] {
         Suspend()
       }
     }
+  }
+
+  def close(implicit tx: InTxn): Continue[Unit] = {
+    val waiters = queue.swap(Right(Queue())).swap.toOption.toList.map(_.toList).flatten
+    Continue((), waiters.map(Resumed(_, Right(None))))
   }
 }

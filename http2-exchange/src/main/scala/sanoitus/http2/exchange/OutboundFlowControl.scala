@@ -6,11 +6,19 @@ import sanoitus.http2.utils._
 
 case class OutboundFlowControl(connection: Connection) { self =>
 
+  val closed: Ref[Boolean] = Ref(false)
   val ready: Ref[Set[Outbound]] = Ref(Set())
   val processor: Ref[Option[Suspended[Set[Outbound]]]] = Ref(None)
 
+  def close(implicit tx: InTxn): Continue[Unit] = {
+    closed() = true
+    Continue((), this.processor.swap(None).toList.map(Resumed(_, Right(Set[Outbound]()))))
+  }
+
   def getReady(): Program[Set[Outbound]] = schedulingEffect[Set[Outbound]] { sus => implicit tx =>
-    if (ready().isEmpty) {
+    if (closed()) {
+      Continue(Set())
+    } else if (ready().isEmpty) {
       processor() = Some(sus)
       Suspend()
     } else {

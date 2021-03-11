@@ -1,8 +1,8 @@
 package sanoitus.http2
 package server
 
-import sanoitus.http2.exchange.Http2ExchangeStream
 import sanoitus.http2.exchange.Connection
+import sanoitus.http2.exchange.Http2ExchangeStream
 import sanoitus.http2.exchange.RequestHeaders
 
 case class ServerHttp2ExchangeStream(override val id: Int,

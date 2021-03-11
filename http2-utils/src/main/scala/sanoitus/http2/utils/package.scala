@@ -1,7 +1,9 @@
-package sanoitus.http2
+package sanoitus
+package http2
 
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.stm._
-import sanoitus._
+import sanoitus.parallel.ParallelLanguage
 
 package object utils {
 
@@ -45,5 +47,17 @@ package object utils {
       (0 to size - 1).foreach { i => array(i) = ((value >> ((size - 1 - i) * 8)) & 0xff).byteValue() }
       array
     }
+  }
+
+  def sharedCloser(parallel: ParallelLanguage, res: Resource[_]): Program[Program[Unit]] = {
+    import parallel._
+    for {
+      promise <- CreatePromise[Unit]()
+      _ <- Fork(Await(promise).flatMap(_ => close(res)), res)
+      fulfilled = new AtomicBoolean(false)
+    } yield for {
+      isFulfilled <- effect[Boolean](_ => Some(fulfilled.getAndSet(true)))
+      _ <- if (isFulfilled) Unit(()) else FulfillPromise(promise, Right(()))
+    } yield ()
   }
 }

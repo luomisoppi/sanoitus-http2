@@ -1,4 +1,4 @@
 dependencies {
-  api "org.sanoitus:sanoitus-core_${gradle.scalaVersion}:0.1.1",
+  api "org.sanoitus:sanoitus-parallel-dsl_${gradle.scalaVersion}:0.1.2",
       "org.scala-stm:scala-stm_${gradle.scalaVersion}:0.9.1"
 }

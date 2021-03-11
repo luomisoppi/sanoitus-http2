@@ -5,8 +5,8 @@ package server
 import scala.concurrent.stm._
 import sanoitus.http2.exchange.Connection
 import sanoitus.http2.exchange.Http2ExchangeStream
-import sanoitus.http2.exchange.RequestHeaders
 import sanoitus.http2.exchange.InboundExchange
+import sanoitus.http2.exchange.RequestHeaders
 
 case class ServerInboundExchange(override val connection: Connection,
                                  override val stream: Http2ExchangeStream,

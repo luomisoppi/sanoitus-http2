@@ -64,4 +64,14 @@ trait Connection {
       outboundFlowControl.consumed(outbound)
       data
   }
+
+  val sendGoAway = schedulingEffect[Unit] { _ => implicit tx => control.goAway(Error.NO_ERROR) }
+
+  def close(implicit tx: InTxn): Continue[Unit] =
+    for {
+      _ <- outboundFlowControl.close
+      _ <- streams.swap(Map()).values.foldLeft(Continue(())) { (acc, stream) => acc.flatMap(_ => stream.close(tx)) }
+    } yield ()
+
+  val closer = schedulingEffect[Unit] { _ => implicit tx => close(tx) }
 }

@@ -1,9 +1,9 @@
 dependencies {
   api project(':http2-wire-dsl'),
       "org.scala-stm:scala-stm_${gradle.scalaVersion}:0.9.1",
-      "org.sanoitus:sanoitus-core_${gradle.scalaVersion}:0.1.1",
-      "org.sanoitus:sanoitus-parallel-dsl_${gradle.scalaVersion}:0.1.1",
-      "org.sanoitus:sanoitus-stream-dsl_${gradle.scalaVersion}:0.1.1",
+      "org.sanoitus:sanoitus-core_${gradle.scalaVersion}:0.1.2",
+      "org.sanoitus:sanoitus-parallel-dsl_${gradle.scalaVersion}:0.1.2",
+      "org.sanoitus:sanoitus-stream-dsl_${gradle.scalaVersion}:0.1.2",
       "org.scalatestplus:scalatestplus-scalacheck_${gradle.scalaVersion}:3.1.0.0-RC2",
       'com.vladsch.flexmark:flexmark-all:0.35.10'
 }

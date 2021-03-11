@@ -10,6 +10,7 @@ import sanoitus.http2.wire.Http2WireLanguage
 import sanoitus.parallel.ParallelLanguage
 import sanoitus.stream.StreamLanguage
 import sanoitus.util.EitherT._
+import sanoitus.http2.utils._
 
 class Http2ClientInterpreter(wire: Http2WireLanguage,
                              stream: StreamLanguage,
@@ -27,6 +28,7 @@ class Http2ClientInterpreter(wire: Http2WireLanguage,
 
   override def apply[A](op: Op[A]): Program[A] =
     op match {
+
       case Connect(host,
                    port,
                    headerTableSize,
@@ -45,24 +47,35 @@ class Http2ClientInterpreter(wire: Http2WireLanguage,
                                         maxFrameSize,
                                         maxHeaderListSize)
           conn = ClientConnection(host, port, wire, stream, hpack, wireConn, settings, inboundBufferSize)
-          inboundLogic = InboundProcessor(stream, ReadFrame(wireConn.value), hpack, conn, ClientFrameProcessors)
+
+          wireConnectionCloser <- sharedCloser(parallel, wireConn)
+          in <- createResource(())(_ => wireConnectionCloser)
+          out <- createResource(())(_ => wireConnectionCloser)
+
+          inboundLogic = InboundProcessor(stream,
+                                          ReadFrame(wireConn.value),
+                                          wireConnectionCloser,
+                                          hpack,
+                                          conn,
+                                          ClientFrameProcessors)
           outboundLogic = OutboundProcessor(
             stream,
             frames => WriteFrame(wireConn.value, frames.head, frames.drop(1)),
             hpack,
             conn,
-            wireConn
+            wireConnectionCloser
           )
-          _ <- Fork(Process(inboundLogic), wireConn)
-          _ <- Fork(Process(outboundLogic), wireConn)
-          res <- resource(conn: Connection)(_ => println("Closing client exchange connection"))
+          _ <- Fork(Process(inboundLogic).flatMap(_ => conn.closer), in)
+          _ <- Fork(Process(outboundLogic), out)
+          res <- createResource(conn: Connection)(_.sendGoAway)
         } yield res
       }
+
       case s: StartRequest => {
         for {
           req <- s.conn.createRequest(s.method, s.path, s.headers, s.priority, s.end)
           res <- req match {
-            case Some(req) => resource(req)(_ => ()).map(Some(_))
+            case Some(req) => createResource(req)(_.closer).map(Some(_))
             case None      => unit(None)
           }
         } yield res
@@ -73,12 +86,9 @@ class Http2ClientInterpreter(wire: Http2WireLanguage,
 
       case GetResponse(request) =>
         for {
-          response <- request.inbound.waitForResponse
-          res <- response match {
-            case true  => resource(request)(_ => ()).map(Some(_))
-            case false => unit(None)
-          }
-        } yield res
+          gotResponse <- request.inbound.waitForResponse
+          response <- if (gotResponse) createResource(request)(_.closer).map(Some(_)) else unit(None)
+        } yield response
 
       case GetResponseHeaders(response) =>
         unit(response.inbound.inboundHeaders.single().get)
